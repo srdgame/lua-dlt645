@@ -26,11 +26,11 @@ function apdu:broadcast_addr()
 end
 
 function apdu:encode_addr(addr)
-	return bcd.encode(addr, "######")
+	return bcd.encode(addr, "XXXXXX")
 end
 
 function apdu:decode_addr(addr)
-	return bcd.decode(addr)
+	return bcd.decode(string.sub(addr, 1, 6))
 end
 
 ---
@@ -115,11 +115,6 @@ function apdu:encode(addr, code, data, sflag)
 
 	return apdus
 end
-
-function apdu:data_addr(data_addr)
-	return string.pack("!1<I4", data_addr)
-end
-
 
 local function valid_apdu(raw)
 	local lead_len = string.len(self._apdu_lead) + 1
