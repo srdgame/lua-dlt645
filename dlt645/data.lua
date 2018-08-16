@@ -1028,11 +1028,27 @@ local function get_format_len(format)
 	return math.ceil(string.len(f) / 2)
 end
 
+_M.get_format= get_format
+_M.get_format_len = get_format_len
 
 function _M.encode(addr, value, format)
 	local format = format or get_format(addr)
 
-	return encode_addr(addr) .. encode_data(value, format)
+	if not string.find(format, ",") then
+		return encode_addr(addr) .. encode_data(value, format)
+	end
+
+	local fmts = {}
+	for w in string.gmatch(format, '([^,]+)') do
+		table.insert(fmts, w)
+	end
+	assert(type(value) == 'table')
+	assert(#value == #fmts)
+	local ret = { encode_addr(addr) }
+	for i, format in ipairs(fmts) do
+		ret[#ret + 1] = encode_data(value[i], format)
+	end
+	return table.concat(ret)
 end
 
 function _M.encode_table(dt)
@@ -1045,39 +1061,33 @@ end
 
 
 function _M.decode(raw, format)
-	local vals = {}
-	while string.len(raw) > 4 do
-		local addr = string.unpack("!1<I4", raw)
-		local format = format or get_format(addr)
-		local len = get_format_len(format)
-		
-		local fmts = {}
-		for w in string.gmatch('([^,]+)') do
-			table.insert(fmts, w)
-		end
-		if #fmts == 1 then
-			local value = bcd.decode(string.sub(raw, 4 + 1, 4 + len), format)
-			vals[#vals + 1] = {
-				addr = addr,
-				value = value
-			}
-		else
-			local value = {}
-			local start = 4
-			for _, format in ipairs(fmts) do
-				local sub_len = get_format_len(format)
-				value[#value + 1] = bcd.decode(string.sub(raw, start + 1, start + sub_len), format)
-				start = start + sub_len
-			end
-		end
-		raw = string.sub(raw, 4 + len + 1)
+	local addr = string.unpack("!1<I4", raw)
+	local format = format or get_format(addr)
+	local len = get_format_len(format)
+
+	if string.len(raw) < 4 + len then
+		return nil, nil, raw
 	end
 
-	if #vals == 1 then
-		return vals[1]
+	if not string.find(format, ",") then
+		local value = bcd.decode(string.sub(raw, 4 + 1, 4 + len), format)
+		return addr, value, string.sub(raw, 4 + len + 1)
 	end
 
-	return vals
+	local fmts = {}
+	for w in string.gmatch(format, '([^,]+)') do
+		table.insert(fmts, w)
+	end
+	assert(#fmts > 1)
+
+	local value = {}
+	local start = 4
+	for _, format in ipairs(fmts) do
+		local sub_len = get_format_len(format)
+		value[#value + 1] = bcd.decode(string.sub(raw, start + 1, start + sub_len), format)
+		start = start + sub_len
+	end
+	return addr, value, string.sub(raw, 4 + len + 1)
 end
 
 return _M
