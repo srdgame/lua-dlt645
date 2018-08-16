@@ -1021,12 +1021,10 @@ local function get_format(addr)
 			return table.concat(f_map, ",")
 		end
 	end
-
 end
 
 local function get_format_len(format)
-	local f = string.gsub(format, '%.', '')
-
+	local f = format:gsub('%.', ''):gsub(',', '')
 	return math.ceil(string.len(f) / 2)
 end
 
@@ -1053,11 +1051,25 @@ function _M.decode(raw, format)
 		local format = format or get_format(addr)
 		local len = get_format_len(format)
 		
-		local value = bcd.decode(string.sub(raw, 4 + 1, 4 + len), format)
-		vals[#vals + 1] = {
-			addr = addr,
-			value = value
-		}
+		local fmts = {}
+		for w in string.gmatch('([^,]+)') do
+			table.insert(fmts, w)
+		end
+		if #fmts == 1 then
+			local value = bcd.decode(string.sub(raw, 4 + 1, 4 + len), format)
+			vals[#vals + 1] = {
+				addr = addr,
+				value = value
+			}
+		else
+			local value = {}
+			local start = 4
+			for _, format in ipairs(fmts) do
+				local sub_len = get_format_len(format)
+				value[#value + 1] = bcd.decode(string.sub(raw, start + 1, start + sub_len), format)
+				start = start + sub_len
+			end
+		end
 		raw = string.sub(raw, 4 + len + 1)
 	end
 
