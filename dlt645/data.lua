@@ -6,8 +6,160 @@ local function encode_addr(data_addr)
 	return string.pack("!1<I4", data_addr)
 end
 
+local dlt645_format_bcd = {
+	["PAP0P1P2"] = {
+		encode = function(value, format)
+			return string.sub(value, 1, 4)
+		end,
+		decode = function(str, format)
+			return string.sub(str, 1, 4)
+		end
+	},
+	["C0C1C2C3"] = {
+		encode = function(value, format)
+			return string.sub(value, 1, 4)
+		end,
+		decode = function(str, format)
+			return string.sub(str, 1, 4)
+		end
+	},
+	["YYMMDDhhmmss"] = {
+		encode = function(value, format)
+			local tm = value
+			if type(tm) == 'number' then
+				os.date("*t", value)
+			end
+			local val = { tm.sec % 60, tm.min % 60, tm.hour % 24, tm.day % 31, tm.month % 12, tm.year % 100 }
+			local ret = {}
+			for _, v in ipairs(val) do
+				ret[#ret + 1] = bcd.encode(v, "XX")
+			end
+			return table.concat(ret)
+		end,
+		decode = function(str, format)
+			local ret = {}
+			for i = 1, 6 do
+				ret[#ret + 1] = bcd.decode(string.sub(str, i, i), "XX")
+			end
+			local tm = {
+				year = ret[6],
+				month = ret[5],
+				day = ret[4],
+				hour = ret[3],
+				min = ret[2],
+				sec = ret[1]
+			}
+			--[[
+			local cur_year = os.date("*t").year
+			if tm.year > (cur_year % 100) then
+				tm.year = tm.year + ((cur_year // 100) - 1) * 100
+			else
+				tm.year = tm.year + (cur_year // 100) * 100
+			end
+			return os.time(tm)
+			]]--
+			return tm
+		end
+	},
+	["YYMMDDhhmm"] = {
+		encode = function(value, format)
+			assert(type(value) == 'table')
+			local val = { value.min, value.hour, value.day, value.month, value.year}
+			local ret = {}
+			for _, v in ipairs(val) do
+				ret[#ret + 1] = bcd.encode(v % 100, "XX")
+			end
+			return table.concat(ret)
+		end,
+		decode = function(str, format)
+			local ret = {}
+			for i = 1, 5 do
+				ret[#ret + 1] = bcd.decode(string.sub(str, i, i), "XX")
+			end
+			local tm = {
+				year = ret[5],
+				month = ret[4],
+				day = ret[3],
+				hour = ret[2],
+				min = ret[1],
+			}
+			--[[
+			local cur_year = os.date("*t").year
+			if tm.year > (cur_year % 100) then
+				tm.year = tm.year + ((cur_year // 100) - 1) * 100
+			else
+				tm.year = tm.year + (cur_year // 100) * 100
+			end
+			return os.time(tm)
+			]]--
+			return tm
+		end
+	},
+	["MMDDhhmm"] = {
+		encode = function(value, format)
+			assert(type(value) == 'table')
+			local val = { value.min, value.hour, value.day, value.month }
+			local ret = {}
+			for _, v in ipairs(val) do
+				ret[#ret + 1] = bcd.encode(v % 100, "XX")
+			end
+			return table.concat(ret)
+		end,
+		decode = function(str, format)
+			local ret = {}
+			for i = 1, 4 do
+				ret[#ret + 1] = bcd.decode(string.sub(str, i, i), "XX")
+			end
+			return {
+				month = ret[4],
+				day = ret[3],
+				hour = ret[2],
+				min = ret[1],
+			}
+		end
+	},
+	["hhmm"] = {
+		encode = function(value, format)
+			return bcd.encode(value.min, "XX") .. bcd.encode(value.hour, "XX")
+		end,
+		decode = function(str, format)
+			local min = bcd.decode(string.sub(str, 1, 1), "XX")
+			local hour = bcd.decode(string.sub(str, 2, 2), "XX")
+			return { hour = hour, min = min }
+		end
+	},
+	["MMDDNN"] = {
+		encode = function(value, format)
+			return bcd.encode(value.n, "XX") .. bcd.encode(value.day, "XX") .. bcd.encode(value.month, "XX")
+		end,
+		decode = function(str, format)
+			local n = bcd.decode(string.sub(str, 1, 1), "XX")
+			local day = bcd.decode(string.sub(str, 2, 2), "XX")
+			local month = bcd.decode(string.sub(str, 3, 3), "XX")
+			return { month = month, day = day, n = n }
+		end
+	},
+	["hhmmNN"] = {
+		encode = function(value, format)
+			return bcd.encode(value.n, "XX") .. bcd.encode(value.min, "XX") .. bcd.encode(value.hour, "XX")
+		end,
+		decode = function(str, format)
+			local n = bcd.decode(string.sub(str, 1, 1), "XX")
+			local min = bcd.decode(string.sub(str, 2, 2), "XX")
+			local hour = bcd.decode(string.sub(str, 3, 3), "XX")
+			return { hour = hour, min = min, n = n }
+		end
+	},
+}
+
 local function encode_data(value, format)
-	return bcd.encode(value, format)
+	local f = dlt645_format_bcd[format] or bcd
+	return f.encode(value, format)
+end
+
+local function decode_data(raw, format)
+	local f = dlt645_format_bcd[format] or bcd
+	return f.decode(raw, format)
 end
 
 local function multi_format(f_map, count, ...)
@@ -1023,7 +1175,22 @@ local function get_format(addr)
 	end
 end
 
+local function unfold_format(format)
+	return string.gsub(format, "([XxNn#])(%d+)", function(c, num)
+		local ret = {}
+		for i = 1, num do
+			ret[#ret + 1] = c
+		end
+		return table.concat(ret)
+	end)
+end
+
+local function replace_special(format)
+	return format:gsub("PAP0P1P2", "N4"):gsub("C0C1C2C3", "N4")
+end
+
 local function get_format_len(format)
+	local format = unfold_format(replace_special(format))
 	local f = format:gsub('%.', ''):gsub(',', '')
 	return math.ceil(string.len(f) / 2)
 end
@@ -1070,7 +1237,7 @@ function _M.decode(raw, format)
 	end
 
 	if not string.find(format, ",") then
-		local value = bcd.decode(string.sub(raw, 4 + 1, 4 + len), format)
+		local value = decode_data(string.sub(raw, 4 + 1, 4 + len), format)
 		return addr, value, string.sub(raw, 4 + len + 1)
 	end
 
@@ -1084,7 +1251,7 @@ function _M.decode(raw, format)
 	local start = 4
 	for _, format in ipairs(fmts) do
 		local sub_len = get_format_len(format)
-		value[#value + 1] = bcd.decode(string.sub(raw, start + 1, start + sub_len), format)
+		value[#value + 1] = decode_data(string.sub(raw, start + 1, start + sub_len), format)
 		start = start + sub_len
 	end
 	return addr, value, string.sub(raw, 4 + len + 1)
