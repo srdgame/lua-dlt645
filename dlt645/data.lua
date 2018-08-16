@@ -104,7 +104,7 @@ local function get_format(addr)
 			valid = true
 		end
 		if valid then
-			if d0 = 0xFF then
+			if d0 == 0xFF then
 				return multi_format_map(13, "XX.XXXX,YYMMDDhhmm")
 			end
 			return "XX.XXXX,YYMMDDhhmm"
@@ -360,7 +360,7 @@ local function get_format(addr)
 		end
 	end
 	if d3 == 0x03 and d2 == 0x11 then
-		if d1 == 0x00 and d0 = 0x00 then
+		if d1 == 0x00 and d0 == 0x00 then
 			return "XXXXXX"
 		end
 		if d1 == 0x00 and (d0 >= 0x01 and d0 <= 0x0A) then
@@ -376,7 +376,7 @@ local function get_format(addr)
 		end
 	end
 	if d3 == 0x03 and d2 == 0x30 then
-		if d1 == 0x00 and d0 = 0x00 then
+		if d1 == 0x00 and d0 == 0x00 then
 			return "XXXXXX"
 		end
 		if d1 == 0x00 and d0 >= 0x01 and d0 <= 0x0A then
@@ -384,7 +384,7 @@ local function get_format(addr)
 			multi_format(f_map, 10, "XXXXXXXX")
 			return table.concat(f_map, ",")
 		end
-		if d1 == 0x01 and d0 = 0x00 then
+		if d1 == 0x01 and d0 == 0x00 then
 			return "XXXXXX"
 		end
 		if d1 == 0x01 and d0 >= 0x01 and d0 <= 0x0A then
@@ -392,7 +392,7 @@ local function get_format(addr)
 			multi_format(f_map, 24, "XXXXXX.XX")
 			return table.concat(f_map, ",")
 		end
-		if d1 == 0x02 and d0 = 0x00 then
+		if d1 == 0x02 and d0 == 0x00 then
 			return "XXXXXX"
 		end
 		if d1 == 0x02 and d0 >= 0x01 and d0 <= 0x0A then
@@ -400,21 +400,21 @@ local function get_format(addr)
 			multi_format(f_map, 24, "XX.XXXXXX", "YYMMDDhhmm")
 			return table.concat(f_map, ",")
 		end
-		if d1 == 0x03 and d0 = 0x00 then
+		if d1 == 0x03 and d0 == 0x00 then
 			return "XXXXXX"
 		end
 		if d1 == 0x03 and d0 >= 0x01 and d0 <= 0x0A then
 			local f_map = {"YYMMDDhhmmss","C0C1C2C3","XXXXXXXX"}
 			return table.concat(f_map, ",")
 		end
-		if d1 == 0x04 and d0 = 0x00 then
+		if d1 == 0x04 and d0 == 0x00 then
 			return "XXXXXX"
 		end
 		if d1 == 0x04 and d0 >= 0x01 and d0 <= 0x0A then
 			local f_map = {"C0C1C2C3","YYMMDDhhmmss","YYMMDDhhmmss"}
 			return table.concat(f_map, ",")
 		end
-		if d1 == 0x05 and d0 = 0x00 then
+		if d1 == 0x05 and d0 == 0x00 then
 			return "XXXXXX"
 		end
 		if d1 == 0x05 and d0 >= 0x01 and d0 <= 0x0A then
@@ -422,7 +422,7 @@ local function get_format(addr)
 			multi_format(f_map, 16, "hhmmNN")
 			return table.concat(f_map, ",")
 		end
-		if d1 == 0x06 and d0 = 0x00 then
+		if d1 == 0x06 and d0 == 0x00 then
 			return "XXXXXX"
 		end
 		if d1 == 0x06 and d0 >= 0x01 and d0 <= 0x0A then
@@ -430,14 +430,14 @@ local function get_format(addr)
 			multi_format(f_map, 28, "MMDDNN")
 			return table.concat(f_map, ",")
 		end
-		if (d1 == 0x07 or d1 == 0x09 or d1 == 0x0A or d1 == 0x0B) and d0 = 0x00 then
+		if (d1 == 0x07 or d1 == 0x09 or d1 == 0x0A or d1 == 0x0B) and d0 == 0x00 then
 			return "XXXXXX"
 		end
 		if (d1 == 0x07 or d1 == 0x09 or d1 == 0x0A or d1 == 0x0B) and d0 >= 0x01 and d0 <= 0x0A then
 			local f_map = {"YYMMDDhhmmss","C0C1C2C3", "XX"}
 			return table.concat(f_map, ",")
 		end
-		if d1 == 0x08 and d0 = 0x00 then
+		if d1 == 0x08 and d0 == 0x00 then
 			return "XXXXXX"
 		end
 		if d1 == 0x08 and d0 >= 0x01 and d0 <= 0x0A then
@@ -445,7 +445,7 @@ local function get_format(addr)
 			multi_format(f_map, 254, "YYMMDDNN")
 			return table.concat(f_map, ",")
 		end
-		if d1 == 0x0C and d0 = 0x00 then
+		if d1 == 0x0C and d0 == 0x00 then
 			return "XXXXXX"
 		end
 		if d1 == 0x0C and d0 >= 0x01 and d0 <= 0x0A then
@@ -453,7 +453,7 @@ local function get_format(addr)
 			multi_format(f_map, 3, "DDhh")
 			return table.concat(f_map, ",")
 		end
-		if (d1 == 0x0D or d1 == 0x0E) and d0 = 0x00 then
+		if (d1 == 0x0D or d1 == 0x0E) and d0 == 0x00 then
 			return "XXXXXX"
 		end
 		if (d1 == 0x0D or d1 == 0x0E) and d0 >= 0x01 and d0 <= 0x0A then
