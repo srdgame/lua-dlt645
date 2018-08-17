@@ -1,6 +1,7 @@
 local skynet = require 'skynet'
 local apdu = require 'dlt645.apdu'
 local code = require "dlt645.code"
+local dlt645_data = require 'dlt645.data'
 local class = require 'middleclass'
 
 local client = class("DLT645_SKYNET_CLIENT")
@@ -15,7 +16,7 @@ local function compose_message(apdu, req)
 	if type(req.code) == 'string' then
 		req.code = code[req.code]
 	end
-	local data = apdu:encode_addr(req.data_addr)
+	local data = dlt645_data.encode_addr(req.data_addr)
 	return assert(apdu:encode(req.addr, req.code, data))
 end
 
@@ -23,7 +24,7 @@ local function make_read_response(apdu, req, timeout, cb)
 	return function(sock)
 		local start = skynet.now()
 		local buf = ""
-		local need_len = apdu._min_packet_len
+		local need_len = apdu:min_apdu_len()
 		local decode = packet_decode(apdu)
 
 		while true do

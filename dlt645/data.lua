@@ -6,6 +6,10 @@ local function encode_addr(data_addr)
 	return string.pack("!1<I4", data_addr)
 end
 
+local function decode_addr(str)
+	return string.unpack("!1<I4", str)
+end
+
 local dlt645_format_bcd = {
 	["PAP0P1P2"] = {
 		encode = function(value, format)
@@ -1202,7 +1206,8 @@ local function get_format_len(format)
 	return math.ceil(string.len(f) / 2)
 end
 
-_M.encode_addr = _M.encode_addr
+_M.encode_addr = encode_addr
+_M.decode_addr = decode_addr
 _M.get_format= get_format
 _M.get_format_len = get_format_len
 

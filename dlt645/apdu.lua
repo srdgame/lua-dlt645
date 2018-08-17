@@ -22,15 +22,19 @@ function apdu:initialize(master)
 end
 
 function apdu:broadcast_addr()
-	return self:addr(999999999999)
+	return self:encode_addr(999999999999)
 end
 
 function apdu:encode_addr(addr)
-	return bcd.encode(addr, "XXXXXX")
+	return bcd.encode(addr, "X12")
 end
 
 function apdu:decode_addr(addr)
 	return bcd.decode(string.sub(addr, 1, 6))
+end
+
+function apdu:min_apdu_len()
+	return self._min_apdu_len
 end
 
 ---
@@ -60,13 +64,13 @@ function apdu:decode_code(code)
 	return c, dir, sflag, not_end
 end
 
-function apdu:encode_data(data)
+function apdu:_encode_data(data)
 	return string.gsub(data, '.', function(c)
 		return string.char( (0x33 + string.byte(c)) % 0xFF)
 	end)
 end
 
-function apdu:decode_data(data)
+function apdu:_decode_data(data)
 	return string.gsub(data, '.', function(c)
 		return string.char( (string.byte(c) - 0x33 + 0xFF) % 0xFF)
 	end)
@@ -99,12 +103,12 @@ function apdu:encode(addr, code, data, sflag)
 	while string.len(data) > 0 do
 		if string.len(data) > 200 then
 			local c = self:encode_code(code, self._dir, sflag, true)
-			local d = self:encode_data(string.sub(data, 1, 200))
+			local d = self:_encode_data(string.sub(data, 1, 200))
 			apdus[#apdus + 1] = self:make_apdu(addr, c, d)
 			data = string.sub(data, 201)
 		else
 			local c = self:encode_code(code, self._dir, sflag, false)
-			local d = self:encode_data(data)
+			local d = self:_encode_data(data)
 			apdus[#apdus + 1] = self:make_apdu(addr, c, d)
 			break
 		end
@@ -162,7 +166,7 @@ function apdu:decode(raw)
 		code = code,
 		sflag = sflag,
 		not_end = not_end,
-		data = self:decode_data(apdu.data),
+		data = self:_decode_data(apdu.data),
 	}, raw
 end
 
