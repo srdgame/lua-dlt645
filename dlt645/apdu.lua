@@ -6,18 +6,19 @@ local class = require 'middleclass'
 
 local apdu = class('DLT645_APDU_CLASS')
 
-local FRAME_START = string.char(0x68)
-local FRAME_END = string.char(0x16)
-
-
-function apdu:initialize(master)
+function apdu:initialize(master, fe_required)
 	if master then
 		self._dir = 0
 	else
 		self._dir = 1
 	end
-	self._apdu_lead = string.pack("!1<BBBB", 0xFE, 0xFE, 0xFE, 0xFE)
+	-- FE FE FE FE is not the must 
 	-- FE FE FE FE 68 AA AA AA AA AA AA 68 CC LL CS 16
+	if fe_required then
+		self._apdu_lead = string.pack("!1<BBBB", 0xFE, 0xFE, 0xFE, 0xFE)
+	else
+		self._apdu_lead = ""
+	end
 	self._min_apdu_len = string.len(self._apdu_lead) + 12 
 end
 

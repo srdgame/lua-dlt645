@@ -56,10 +56,10 @@ local function make_read_response(apdu, req, timeout, cb)
 	end
 end
 
-function client:initialize(sc, opt, master)
+function client:initialize(sc, opt, master, fe_required)
 	local channel = sc.channel(opt)
 	self._chn = channel
-	self._apdu = apdu:new(master)
+	self._apdu = apdu:new(master, fe_required)
 end
 
 function client:connect(only_once)
