@@ -1,10 +1,10 @@
 local bcd = require 'bcd'
-local sum = require 'hashing.sum'
+local sum = require 'hashings.sum'
 local dlt645_code = require 'dlt645.code'
 
 local class = require 'middleclass'
 
-local frame = class('DLT645_APDU_CLASS')
+local apdu = class('DLT645_APDU_CLASS')
 
 local FRAME_START = string.char(0x68)
 local FRAME_END = string.char(0x16)
@@ -76,10 +76,10 @@ function apdu:apdu_lead()
 	return self._apdu_lead
 end
 
-local function make_apdu(addr, code, data)
+function apdu:make_apdu(addr, code, data)
 	local apdu_init = string.pack("!1<Bc6BBs1", 0x68, addr, 0x68, code, data)
 	local cs = sum:new(apdu_init):digest()
-	return self._apdu_lead .. framke_init .. string.pack("!1<BB", cs, 0x16)
+	return self._apdu_lead .. apdu_init .. cs.. string.char(0x16)
 end
 
 
@@ -93,19 +93,20 @@ end
 function apdu:encode(addr, code, data, sflag)
 	local addr = self:encode_addr(addr)
 	local sflag = self._dir == 1 and sflag or false
-	local code = tonumber(data) or dlt645_code[code]
+	local code = tonumber(code) and tonumber(code) or dlt645_code[code]
 
 	local apdus = {}
 	while string.len(data) > 0 do
 		if string.len(data) > 200 then
 			local c = self:encode_code(code, self._dir, sflag, true)
 			local d = self:encode_data(string.sub(data, 1, 200))
-			apdus[#apdus + 1] = make_apdu(addr, c, d)
+			apdus[#apdus + 1] = self:make_apdu(addr, c, d)
 			data = string.sub(data, 201)
 		else
 			local c = self:encode_code(code, self._dir, sflag, false)
 			local d = self:encode_data(data)
-			apdus[#apdus + 1] = make_apdu(addr, c, d)
+			apdus[#apdus + 1] = self:make_apdu(addr, c, d)
+			break
 		end
 	end
 

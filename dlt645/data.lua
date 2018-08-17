@@ -197,6 +197,13 @@ local function get_format(addr)
 				end
 			end
 		end
+		if d2 == 0x0B then
+			if d1 == 0x00 then
+				if d0 == 0x01 and d0 == 0x01 then
+					return "XXXXXX.XX"
+				end
+			end
+		end
 
 		if d2 <= 0x0A and d1 == 0XFF then
 			return multi_format_map(64, "XXXXXX.XX")
@@ -1195,6 +1202,7 @@ local function get_format_len(format)
 	return math.ceil(string.len(f) / 2)
 end
 
+_M.encode_addr = _M.encode_addr
 _M.get_format= get_format
 _M.get_format_len = get_format_len
 
