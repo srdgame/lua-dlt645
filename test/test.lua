@@ -80,9 +80,13 @@ local function test_apdu(dev_addr, code, data_addr, data_value)
 	assert(rpdu.addr == dev_addr)
 	assert(rpdu.data == data)
 	assert(rpdu.sflag == 0)
-	print('=========== TestAPDU Done ===========')
 	-- TODO: for not_end stuff
 	--assert
+	--
+	assert(not dlt645_apdu(true, false):decode(string.sub(pdu, 2)))
+	print('=========== TestAPDU Done ===========')
 end
 
 test_apdu(991122334455, dlt645_code.ReadData, addr, 12131.51)
+
+
