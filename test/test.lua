@@ -1,5 +1,7 @@
 local basexx = require 'basexx'
-local data = require "dlt645.data"
+local dlt645_code  = require 'dlt645.code'
+local dlt645_data = require "dlt645.data"
+local dlt645_apdu = require 'dlt645.apdu'
 
 local function print_data(data)
 	assert(data)
@@ -9,7 +11,7 @@ local function print_data(data)
 	return addr, data
 end
 
-local format = data.get_format(0x10020101)
+local format = dlt645_data.get_format(0x10020101)
 assert(format == "YYMMDDhhmmss")
 
 local function eq_assert(v1, v2)
@@ -29,10 +31,10 @@ local function eq_assert(v1, v2)
 end
 
 local function test_format(addr, value, expacted_fmt, expacted_val)
-	local format = data.get_format(addr)
+	local format = dlt645_data.get_format(addr)
 	assert(format == expacted_fmt, string.format("format: %s - %s", format, expacted_fmt))
-	local d = data.encode(addr, value)
-	local d2 = data.encode(addr, value, format)
+	local d = dlt645_data.encode(addr, value)
+	local d2 = dlt645_data.encode(addr, value, format)
 	assert(d == d2)
 
 	local aa, dd = print_data(d)
@@ -40,7 +42,7 @@ local function test_format(addr, value, expacted_fmt, expacted_val)
 		assert(dd == expacted_val)
 	end
 
-	local ra, rv, rd = data.decode(d)
+	local ra, rv, rd = dlt645_data.decode(d)
 	--print(ra, addr)
 	assert(addr == ra)
 	--print(value, rv)
@@ -48,7 +50,7 @@ local function test_format(addr, value, expacted_fmt, expacted_val)
 end
 
 local addr = 0x00023F0C
-local d = data.encode(addr, 12131.50121)
+local d = dlt645_data.encode(addr, 12131.50121)
 local a, d = print_data(d)
 assert(a == '0C3F0200')
 
@@ -68,3 +70,19 @@ print("=== begin time struct test====")
 test_format(0x03050001, {tm, 123.456, tm2}, "YYMMDDhhmmss,XXX.XXX,YYMMDDhhmmss")
 test_format(0x01010000, {12.1234, {year=18, month=08, day = 16, hour = 17, min = 51}}, "XX.XXXX,YYMMDDhhmm")
 
+
+local function test_apdu(dev_addr, code, data_addr, data_value)
+	assert(dev_addr and code and data_addr and data_value)
+	local data = assert(dlt645_data.encode(data_addr, data_value))
+	local pdu = assert(dlt645_apdu(false, false):encode(dev_addr, code, data))
+	local rpdu = dlt645_apdu(true, false):decode(pdu)
+	assert(rpdu.code == code)
+	assert(rpdu.addr == dev_addr)
+	assert(rpdu.data == data)
+	assert(rpdu.sflag == 0)
+	print('=========== TestAPDU Done ===========')
+	-- TODO: for not_end stuff
+	--assert
+end
+
+test_apdu(991122334455, dlt645_code.ReadData, addr, 12131.51)

@@ -96,6 +96,7 @@ end
 -- @tparam boolean sflag Exception flag (slave mode only)
 -- @treturn string apdu string
 function apdu:encode(addr, code, data, sflag)
+	assert(addr and code and data, "invalid params for apdu:encode()")
 	local addr = self:encode_addr(addr)
 	local sflag = self._dir == 1 and sflag or false
 	local code = tonumber(code) and tonumber(code) or dlt645_code[code]
@@ -122,36 +123,56 @@ function apdu:encode(addr, code, data, sflag)
 	return apdus
 end
 
-local function valid_apdu(raw)
-	local lead_len = string.len(self._apdu_lead) + 1
-	local r, h1, addr, h2, code, data, cs, ed, se = pcall(string.unpack, '!1<Bc6BBs1BB', raw, lead_len + 1)
+function apdu:valid_apdu(raw)
+	local lead_len = string.len(self._apdu_lead)
+	local r, h1, addr, h2, code, data_len = pcall(string.unpack, '!1<Bc6BBB', raw, lead_len + 1)
 	if not r then
-		return nil, raw
+		return nil, string.sub(raw, lead_len + 2)
 	end
 
-	if h1 ~= 0x68 or h2 ~= 0x68 or ed ~= 0x16 then
-		return nil, string.sub(raw, lead_len + 1) -- only skip apdu lead
+	if h1 ~= 0x68 or h2 ~= 0x68 then
+		return nil, string.sub(raw, lead_len + 2)
 	end
 
-	local rcs = sub:new(string.sub(lead_len + 1, se - 3)):digest()
-	if rcs ~= cs then
-		return nil, string.sub(raw, lead_len + 2) -- skip apdu lead and one 0x68
+	if data_len + lead_len + 10 > string.len(raw) then
+		return nil, string.sub(raw, lead_len + 3) -- skip apdu lead and one 0x68
+	end
+
+	local r, data, cs, ed, se = pcall(string.unpack, '!1<s1BB', raw, lead_len + 10)
+	if not r then
+		return nil, string.sub(raw, lead_len + 3) -- skip apdu lead and one 0x68
+	end
+
+	if ed ~= 0x16 then
+		return nil, string.sub(raw, lead_len + 3) -- skip apdu lead and one 0x68
+	end
+
+	local rcs = sum:new(string.sub(raw, lead_len + 1, se - 3)):digest()
+	if string.byte(rcs) ~= cs then
+		--print("CS diff", rcs, cs)
+		return nil, string.sub(raw, lead_len + 3) -- skip apdu lead and one 0x68
 	end
 
 	return {addr = addr, code = code, data = data}, string.sub(raw, se)
 end
 
 function apdu:decode(raw)
+	--[[
+	local basexx = require 'basexx'
+	print(basexx.to_hex(raw))
+	]]--
+
 	local s, e = string.find(raw, self._apdu_lead..string.char(0x68), 1, true)
 	if not e then
 		return nil, "", self._min_apdu_len
 	end
+
 	local raw = string.sub(raw, s)
 	if string.len(raw) < self._min_apdu_len then
 		return nil, raw, self._min_apdu_len - string.len(raw)
 	end
 
-	local apdu, raw = valid_apdu(raw)
+	local apdu, raw = self:valid_apdu(raw)
 	if not apdu then
 		-- recursive decode
 		return self:decode(raw)
