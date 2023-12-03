@@ -27,11 +27,11 @@ function apdu:broadcast_addr()
 end
 
 function apdu:encode_addr(addr)
-	return bcd.encode(addr, "X12")
+	return string.reverse(bcd.encode(addr, "X12"))
 end
 
 function apdu:decode_addr(addr)
-	return bcd.decode(string.sub(addr, 1, 6))
+	return bcd.decode(string.reverse(string.sub(addr, 1, 6)))
 end
 
 function apdu:min_apdu_len()
@@ -59,9 +59,9 @@ end
 
 function apdu:decode_code(code)
 	local c = code & 0x1F
-	local not_end = code & (1 << 5)
-	local sflag = code & (1 << 6)
-	local dir = code & (1 << 7)
+	local not_end = (code >> 5) & 0x1 == 0x1
+	local sflag = (code >> 6) & 0x1 == 0x1
+	local dir = (code >> 7) & 0x1
 	return c, dir, sflag, not_end
 end
 
@@ -182,6 +182,10 @@ function apdu:decode(raw)
 	if dir == self._dir then
 		return self:decode(raw)
 	end
+
+	local basexx = require 'basexx'
+	print(basexx.to_hex(apdu.data))
+	print(basexx.to_hex(self:_decode_data(apdu.data)))
 
 	return {
 		addr = self:decode_addr(apdu.addr),

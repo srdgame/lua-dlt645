@@ -38,7 +38,7 @@ local function make_read_response(apdu, req, timeout, cb)
 				return false, err
 			end
 			if cb then
-				cb("IN", str)
+				cb("IN", req, str)
 			end
 
 			buf = buf..str
@@ -74,7 +74,7 @@ function client:request(req, timeout)
 	local cb = self._data_cb
 	local pdu = compose_message(self._apdu, req)
 	if cb then
-		cb("OUT", pdu)
+		cb("OUT", req, pdu)
 	end
 	return self._chn:request(pdu, make_read_response(self._apdu, req, timeout, cb))
 end

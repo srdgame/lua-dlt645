@@ -157,13 +157,28 @@ local dlt645_format_bcd = {
 }
 
 local function encode_data(value, format)
-	local f = dlt645_format_bcd[format] or bcd
-	return f.encode(value, format)
+	local f = dlt645_format_bcd[format]
+	if f then
+		return f.encode(value, format)
+	end
+
+	return string.reverse(bcd.encode(value, format))
 end
 
 local function decode_data(raw, format)
-	local f = dlt645_format_bcd[format] or bcd
-	return f.decode(raw, format)
+	--[[
+	local basexx = require 'basexx'
+	print(basexx.to_hex(raw))
+	print(format)
+	]]--
+	local f = dlt645_format_bcd[format]
+	if f then
+		return f.decode(raw, format)
+	end
+
+	local len = _M.get_format_len(format)
+	local val_raw = string.reverse(string.sub(raw, 1, len))
+	return bcd.decode(val_raw, format)
 end
 
 local function multi_format(f_map, count, ...)
@@ -1243,7 +1258,7 @@ end
 function _M.decode(raw, format)
 	local addr = string.unpack("!1<I4", raw)
 	local format = format or get_format(addr)
-	local len = get_format_len(format)
+	local len = _M.get_format_len(format)
 
 	if string.len(raw) < 4 + len then
 		return nil, nil, raw
@@ -1263,7 +1278,7 @@ function _M.decode(raw, format)
 	local value = {}
 	local start = 4
 	for _, format in ipairs(fmts) do
-		local sub_len = get_format_len(format)
+		local sub_len = _M.get_format_len(format)
 		value[#value + 1] = decode_data(string.sub(raw, start + 1, start + sub_len), format)
 		start = start + sub_len
 	end
